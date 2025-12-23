@@ -1,6 +1,6 @@
 workflows:
   ios-workflow:
-    name: LED Glow iOS Build (Unsigned)
+    name: LED Glow iOS Build (Unsigned IPA)
     instance_type: mac_mini_m2
     max_build_duration: 120
     environment:
@@ -20,8 +20,9 @@ workflows:
       - name: Verify Scheme
         script: |
           xcodebuild -list -project LEDControl.xcodeproj
-      - name: Build Unsigned IPA
+      - name: Build Archive & Export Unsigned IPA
         script: |
+          # Создаём архив без подписи
           xcodebuild archive \
             -project LEDControl.xcodeproj \
             -scheme LEDControl \
@@ -30,10 +31,11 @@ workflows:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-          xcodebuild -exportArchive \
-            -archivePath build/LEDControl.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/ios/ipa
+          # Копируем .app в папку ipa и переименовываем в .ipa
+          mkdir -p build/ios/ipa
+          cp -R build/LEDControl.xcarchive/Products/Applications/LEDControl.app build/ios/ipa/LEDControl.app
+          cd build/ios/ipa
+          zip -qr LEDControl.ipa LEDControl.app
     artifacts:
       - "build/ios/ipa/*.ipa"
       - "build/LEDControl.xcarchive"

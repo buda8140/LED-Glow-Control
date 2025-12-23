@@ -35,6 +35,5 @@ workflows:
             --scheme LEDControl \
             --configuration Release
     artifacts:
-      - build/ios/ipa/*.ipa
-      - *.xcarchive
-
+      - "build/ios/ipa/*.ipa"   # В кавычках!
+      - "*.xcarchive"           # В кавычках!

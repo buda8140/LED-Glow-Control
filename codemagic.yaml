@@ -6,7 +6,7 @@ workflows:
     environment:
       xcode: latest
       ios_signing:
-        distribution_type: ad_hoc
+        distribution_type: development   # Изменено с ad_hoc на development
         bundle_identifier: com.buda1337.LEDControl
     triggering:
       events:
@@ -23,17 +23,13 @@ workflows:
       - name: Verify Scheme
         script: |
           xcodebuild -list -project LEDControl.xcodeproj
-      - name: Set up code signing
-        script: |
-          keychain initialize
-          app-store-connect fetch-signing-files "com.buda1337.LEDControl" --type IOS_APP_ADHOC --create
-          keychain add-certificates
-      - name: Build IPA
+      - name: Build IPA (Development)
         script: |
           xcode-project build-ipa \
             --project LEDControl.xcodeproj \
             --scheme LEDControl \
-            --configuration Release
+            --configuration Release \
+            --export-options-plist ExportOptions.plist
     artifacts:
-      - "build/ios/ipa/*.ipa"   # В кавычках!
-      - "*.xcarchive"           # В кавычках!
+      - "build/ios/ipa/*.ipa"
+      - "*.xcarchive"

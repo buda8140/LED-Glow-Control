@@ -4,11 +4,11 @@ struct DiagnosticsView: View {
     @EnvironmentObject var btManager: BluetoothManager
     @State private var rawHex = ""
     @State private var logs: [String] = []
-    
+   
     var body: some View {
         ZStack {
             Theme.background()
-            
+           
             VStack(spacing: 20) {
                 HStack {
                     Text(NSLocalizedString("DIAGNOSTICS", comment: ""))
@@ -22,7 +22,7 @@ struct DiagnosticsView: View {
                 }
                 .padding(.horizontal, 25)
                 .padding(.top, 40)
-                
+               
                 // Real-time Logs
                 GlassCard {
                     ScrollViewReader { proxy in
@@ -44,21 +44,21 @@ struct DiagnosticsView: View {
                     }
                 }
                 .padding(.horizontal)
-                
+               
                 // Raw Sender
                 GlassCard {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("RAW HEX SENDER")
                             .font(.caption2.bold())
                             .foregroundColor(.white.opacity(0.4))
-                        
+                       
                         HStack {
                             TextField("7E 04 04 01 ...", text: $rawHex)
                                 .font(.system(.body, design: .monospaced))
                                 .padding(12)
                                 .background(Color.white.opacity(0.05))
                                 .cornerRadius(12)
-                            
+                           
                             Button(action: sendRaw) {
                                 Image(systemName: "paperplane.fill")
                                     .font(.title3)
@@ -71,17 +71,41 @@ struct DiagnosticsView: View {
                     }
                 }
                 .padding(.horizontal)
-                
-                // Device Info
+               
+                // Device Info — заменяем InfoRow на простой красивый список
                 GlassCard {
-                    VStack(spacing: 12) {
-                        InfoRow(label: "Peripheral", value: btManager.connectedPeripheral?.name ?? "N/A")
-                        InfoRow(label: "Identifier", value: btManager.connectedPeripheral?.identifier.uuidString.prefix(12).appending("...") ?? "N/A")
-                        InfoRow(label: "Status", value: btManager.connectionStatus)
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("Peripheral:")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(btManager.connectedPeripheral?.name ?? "Not connected")
+                                .foregroundColor(.white)
+                                .font(.system(.body, design: .monospaced))
+                        }
+                        
+                        HStack {
+                            Text("Identifier:")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(btManager.connectedPeripheral?.identifier.uuidString.prefix(12) ?? "N/A")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        
+                        HStack {
+                            Text("Status:")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(btManager.connectionStatus)
+                                .foregroundColor(btManager.isConnected ? .green : .red)
+                                .bold()
+                        }
                     }
+                    .padding()
                 }
                 .padding(.horizontal)
-                
+               
                 Spacer()
             }
         }
@@ -89,21 +113,22 @@ struct DiagnosticsView: View {
             setupLogging()
         }
     }
-    
+   
     private func setupLogging() {
-        // In a real app, we'd hook into the actual write calls.
-        // For this demo, we'll simulate the bridge.
         if logs.isEmpty {
             logs.append("[SYSTEM] Logger initialized")
         }
     }
-    
+   
     private func sendRaw() {
-        let hex = rawHex.replacingOccurrences(of: " ", with: "")
-        guard let data = hex.hexData() else { return }
-        
-        // This would require a bypass in BluetoothManager, but we'll simulate for now
-        logs.append("TX: \(hex.uppercased())")
+        let hex = rawHex.replacingOccurrences(of: " ", with: "").uppercased()
+        guard !hex.isEmpty, let data = hex.hexData() else {
+            logs.append("ERROR: Invalid HEX")
+            return
+        }
+       
+        // Здесь можно добавить реальную отправку, если расширишь BluetoothManager
+        logs.append("TX: \(hex)")
         rawHex = ""
         Haptics.play(.medium)
     }
@@ -111,13 +136,16 @@ struct DiagnosticsView: View {
 
 extension String {
     func hexData() -> Data? {
-        var data = Data(capacity: self.count / 2)
+        var data = Data(capacity: count / 2)
         let regex = try! NSRegularExpression(pattern: "[0-9a-f]{1,2}", options: .caseInsensitive)
-        regex.enumerateMatches(in: self, range: NSRange(location: 0, length: self.count)) { match, _, _ in
-            let byteString = (self as NSString).substring(with: match!.range)
-            let num = UInt8(byteString, radix: 16)!
-            data.append(num)
+        regex.enumerateMatches(in: self, range: NSRange(location: 0, length: count)) { match, _, _ in
+            if let match = match {
+                let byteString = (self as NSString).substring(with: match.range)
+                if let num = UInt8(byteString, radix: 16) {
+                    data.append(num)
+                }
+            }
         }
-        return data
+        return data.count > 0 ? data : nil
     }
 }
